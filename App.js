@@ -50,73 +50,8 @@ Ext.define('CustomApp', {
             target: this
         });
 
-
-        var projectStore = Ext.create('Rally.data.WsapiDataStore',{
-	        model: 'Project',
-	        limit : Infinity,
-	        fetch: ['Name','ObjectID'],
-	        autoLoad: true,
-            sorters: [{
-                property: 'Name',
-                direction: 'ASC'
-            }],
-	        filters: 
-	        	Rally.data.QueryFilter.or([
-	        		{
-                        property: 'Parent.ObjectID',
-                        value: project
-                    },
-	                Rally.data.QueryFilter.or([
-	                    {
-	                        property: 'Parent.parent.ObjectID',
-	                        value: project
-	                    },
-	                    {
-	                        property: 'Parent.parent.parent.ObjectID',
-	                        value: project
-	                    }   
-	                ])
-                ]),
-
-	        listeners:{
-	            load: function(store,records,success) {
-	            	console.log('projects', records);
-
-	            	var localRecords = [];
-	            	// localRecords.push({
-              //       	_refName: '-- No Entry --',
-              //       	Name: ''
-              //       });
-
-	            	_.each(records, function(project) {
-                        localRecords.push({
-                        	_refName: project.get('Name'),
-                        	Name: project.get('Name'),
-                        	ObjectID: project.get('ObjectID')
-                        });
-                    });
-
-                    var customProjectStore = Ext.create('Ext.data.Store', {
-			    		fields: ['_refName', 'Name', 'ObjectID'],
-					    data : localRecords
-					});
-
-                    console.log('projectStore:', customProjectStore);
-
-	                this._updateCombo(customProjectStore);
-	                this._buildFilter();
-	            },
-	            scope: this
-	        }
-    	});
+        this._buildFilter();
     },
-
-
-	_updateCombo: function(myStore){
-    	if (this._projectStore === undefined){
-	        this._projectStore = myStore;
-	    }
-	},
 
 
     _buildFilter: function() {
@@ -137,7 +72,7 @@ Ext.define('CustomApp', {
                 	console.log('iteration', this._iterationName);
 
                 },
-                select: function(combobox, records, opts) {
+                select: function(combobox, records) {
                     var iteration = records[0];
                 	this._iterationId = iteration.get('ObjectID');
                 	this._iterationName = iteration.get('Name');
@@ -200,30 +135,26 @@ Ext.define('CustomApp', {
 					bodyPadding: 10,
 					align: 'stretch',
 					autoHeight: true,
-					items: [{	
-						    	xtype: 'combobox',
-						        fieldLabel: 'Project',
-						        store: this._projectStore,
-								multiSelect: true,
-								value: ' ',
-						        queryMode: 'local',
-						        displayField: '_refName',
-						        valueField: 'ObjectID',
-						        width: 350,	
+					items: [{
+					    		xtype: 'rallymultiprojectpicker',
+					    		fieldLabel: 'Project',
+					    		width: 350,	
 						        margin: '10 0 5 0',
-						        anyMatch: true,
-						        listeners: {
-						            select: function(combo,records){
+					    		listeners: {
+						            selectionchange: function(picker, values){
 						                //console.log(records[0]["data"]["Name"]);
-						                console.log('project combo: ', combo);
-						                console.log('project: ', combo.getValue());
+						                console.log('project combo: ', values);
 
-						                this._filterProject = combo.getValue();
+						                this._filterProject = [];
+						                _.each(values, function(project) {
+					                        this._filterProject.push(
+												project.get('ObjectID')
+					                        );
+					                    }, this);
 						            },
 						        	scope:this
-						        },
-						        scope:this
-						    },
+						        }
+					    	},
 						    iterationComboBox,
 						    statesComboBox,
 						    searchButton
