@@ -15,6 +15,10 @@ Ext.define('CustomApp', {
     _localDefects: undefined,
     _localTestSets: undefined,
 
+    _userList: undefined,
+    _filterUserList: undefined,
+    _dialogModal: undefined,
+
     items:[
         {
             xtype:'container',
@@ -161,7 +165,6 @@ Ext.define('CustomApp', {
 					]}
 				]
 			}
-		
 		]);
     },
 
@@ -325,12 +328,135 @@ Ext.define('CustomApp', {
     },
 
 
+
+    _showUserFilter: function() {
+		var proceedButton = Ext.create('Rally.ui.Button', {
+        	text: 'Proceed',
+        	margin: '10 10 10 10',
+        	scope: this,
+        	handler: function() {
+        		this._filterGrid();
+        		Ext.ComponentQuery.query('#filterUserDialog')[0].hide();
+        	}
+        });
+
+        var backButton = Ext.create('Rally.ui.Button', {
+        	text: 'Back',
+        	margin: '10 10 10 10',
+        	scope: this,
+        	handler: function() {
+        		Ext.ComponentQuery.query('#filterUserDialog')[0].hide();
+        	}
+        });
+
+    	var panelButtons = Ext.create('Ext.container.Container', {
+    		itemId:'panelButtons',
+    		width: 500,
+    		layout: {
+		        type: 'hbox'
+		    },
+		    items: [backButton, 
+		    proceedButton]
+        });
+
+
+    	var userList = this._buildUserCheckBoxList();
+    	console.log('userList', userList);
+
+
+        var panelUsers = Ext.create('Ext.container.Container', {
+    		itemId:'panelUsers',
+    		width: 400,
+    		height: 400,
+    		autoScroll:true,
+    		layout: {
+		        type: 'vbox'
+		    },
+		    items: [{
+		        xtype: 'checkboxgroup',
+			    listeners: {
+		            change: function(field, newValue, oldValue, eOpts){
+		                console.log('filter selected:', newValue.userName);
+
+		                //send this list to _filterUserList
+		                this._filterUserList = newValue.userName;
+		            },
+		            scope: this
+		        },
+		        columns: 1,
+		        vertical: true,
+		        items: userList
+		    }]
+        });
+
+
+        if (!this._dialogModal) {
+	    	this._dialogModal = Ext.create('Rally.ui.dialog.Dialog', {
+			     autoShow: true,
+			     draggable: true,
+			     closeAction: 'hide',
+			     closable: true,
+			     itemId: 'filterUserDialog',
+			     width: 500,
+			     title: 'Available Users to filter',
+			     items: [{
+			         xtype: 'component',
+			         html: 'Select users to proceed',
+			         padding: 10
+			     }, 
+			     panelUsers,
+			     panelButtons]
+			});
+        }
+
+    	this._dialogModal.show();
+    },
+
+
+    _buildUserCheckBoxList: function() {
+    	var checkBoxes = [];
+    	_.each(this._userList, function(userName) {
+    		checkBoxes.push({
+    			boxLabel: userName, name: 'userName', inputValue: userName
+    		});
+    	}, this);
+
+    	return checkBoxes;
+    },
+
+
+    _filterGrid: function() {
+    	var grid = Ext.ComponentQuery.query('#activeStoriesGrid')[0];
+    	console.log('filter these users:', this._filterUserList);
+
+    	grid.store.clearFilter(true);
+    	if (this._filterUserList) {
+	    	grid.store.filterBy(function(record, Owner) {
+	    		if (this._filterUserList.indexOf(record.get('Owner')) != -1) {
+		            return true;
+		        } else {
+		            return false;
+		        }
+	    	}, this);
+    	}
+    },
+
+
     _showGrid: function() {
     	console.log('creating grid for:', store);
     	var store = this._createStore();
 
+
+    	//first show modal of users,
+    	this._showUserFilter();
+
+
+    	//then filter the store based on users selected
+
+
     	var grid = Ext.create('Rally.ui.grid.Grid', {
     		//width: 1600,
+    		itemId: 'activeStoriesGrid',
 			viewConfig: {
 				stripeRows: true,
 				enableTextSelection: true
@@ -338,7 +464,6 @@ Ext.define('CustomApp', {
 			showRowActionsColumn: false,
 			showPagingToolbar: false,
 			enableEditing: false,
-    		itemId : 'activeStories',
     		store: store,
 
     		columnCfgs: [
@@ -385,6 +510,7 @@ Ext.define('CustomApp', {
 
 
     	this.myMask.hide();
+    	this._filterUserList = undefined;
     },
 
 
@@ -419,7 +545,10 @@ Ext.define('CustomApp', {
 
 		console.log('map', mapOwner);
 
+		this._userList = [];
+
 		mapOwner.eachKey(function(ownerName, artifacts) {
+			this._userList.push(ownerName);
 
 			var aInitiative = 0;
 			var aFeature = 0;
@@ -520,6 +649,9 @@ Ext.define('CustomApp', {
 
     	if (this._iterationName && this._iterationName !== '-- Clear --') {
     		filter = filter.and(this._getIterationFilter());
+
+    		console.log('iter filter', this._iterationName);
+    		console.log('iter filter string', filter.toString());
     	}
 
     	console.log('filter', filter);
@@ -531,7 +663,7 @@ Ext.define('CustomApp', {
 		        project: null//'/project/'+ this.projectId //null to search all workspace
 		    },
 			models: ['HierarchicalRequirement'],
-			fetch: ['FormattedID', 'Name', 'ObjectID', 'Project', 'ScheduleState', 'Owner'],
+			fetch: ['FormattedID', 'Name', 'ObjectID', 'Project', 'ScheduleState', 'Owner', 'Iteration'],
 			filters: filter,
 			limit: Infinity
 		});
