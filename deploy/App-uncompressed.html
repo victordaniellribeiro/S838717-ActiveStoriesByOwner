@@ -234,6 +234,29 @@
     },
 
 
+    _getProjectFilter: function(project) {
+    	var projectFilter = Ext.create('Rally.data.QueryFilter', {
+            property: 'Project',
+            operator: '=',
+            value: '/project/' + project
+        }).or(
+	        Ext.create('Rally.data.QueryFilter', {
+		            property: 'Project.parent',
+		            operator: '=',
+		            value: '/project/' + project
+		        }).or(
+		        	Ext.create('Rally.data.QueryFilter', {
+			            property: 'Project.parent.parent',
+			            operator: '=',
+			            value: '/project/' + project
+			        })
+	        )
+        );
+
+        return projectFilter;
+    },
+
+
     _getFilters: function() {
     	var blockedFilter = Ext.create('Rally.data.QueryFilter', {
 			property: 'Blocked',
@@ -250,27 +273,15 @@
 			console.log('project:', project);
 
 			if (this._filterProject.length === 1) {
-				filter = Ext.create('Rally.data.QueryFilter', {
-                    property: 'Project',
-                    operator: '=',
-                    value: '/project/' + project
-                });
+				filter = this._getProjectFilter(project);
 			}
 
 			if (this._filterProject.length > 1 && filter) {
-				var lFilter = Ext.create('Rally.data.QueryFilter', {
-                    property: 'Project',
-                    operator: '=',
-                    value: '/project/' + project
-                });
+				var lFilter = this._getProjectFilter(project)
 
 				filter = filter.or(lFilter);
 			} else {
-				filter = Ext.create('Rally.data.QueryFilter', {
-                    property: 'Project',
-                    operator: '=',
-                    value: '/project/' + project
-                });
+				filter = this._getProjectFilter(project)
 			}
 
     	}, this);
