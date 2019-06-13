@@ -63,7 +63,88 @@
             target: this
         });
 
-        this._buildFilter();
+
+        var userStore = Ext.create('Rally.data.wsapi.Store',{
+	  		// context: {
+		   //      projectScopeUp: false,
+		   //      projectScopeDown: true,
+		   //      // project: '/project/'+ this._projectId //null to search all workspace
+		   //      project: null
+		   //  },
+	        model: 'Project',
+	        limit : 200,//Infinity
+	        fetch: ['Editors'],
+
+	        autoLoad: true,
+	        filters: [
+        		{
+                    property: 'ObjectID',
+                    operator: '=',
+                    // value: 46772556076
+                    value: 259798485476 //TODO switch to current project
+                }
+			],
+
+	        listeners:{
+	            load: function(store,records,success) {
+	            	console.log('users', store, records);
+
+	            	var project = records[0];
+	            	var editorsInfo = project.get('Editors');
+        			var editorsCount = editorsInfo.Count;
+
+        			console.log('loading Editors', editorsInfo);
+
+        			project.getCollection('Editors').load({
+			            fetch: ['_refObjectName', 'Name', 'ObjectID', 'DisplayName', 'UserName', 'Deleted', 'Disabled'],
+						limit : 500,
+			            filters: [
+			                {
+			                    property: 'Disabled',
+			                    operator: '=',
+			                    value: false
+			                },
+			                {
+			                    property: 'Deleted',
+			                    operator: '=',
+			                    value: false
+			                }
+						],
+						// sorters: [
+		    //                 {
+		    //                     property: '_refObjectName',
+		    //                     direction: 'ASC'
+		    //                 }
+		    //             ],
+			            callback: function(users, operation, success) {
+			            	console.log('Editors loaded', users);
+			                Ext.Array.each(users, function(user) {
+			                    //each record is an instance of the User model
+			                    // console.log('User: ', user);
+			                });
+
+			                // var userStore = Ext.create('Rally.data.wsapi.artifact.Store', {
+			                var userCustomStore = Ext.create('Rally.data.wsapi.artifact.Store', {
+			                	models: ['User'],
+							});
+
+							userCustomStore.loadData(users);
+
+			                this._userStore = userCustomStore;
+			            	store.remoteFilter = false;
+
+			            	this._buildFilter();
+			            },
+			            scope: this
+			        });
+	            },
+	            scope: this
+	        }
+    	});
+
+
+
+        //this._buildFilter();
     },
 
 
@@ -120,6 +201,175 @@
 	        }
 	    };
 
+	  //   var userCombo2 = { 
+   //      	xtype: 'rallyusersearchcombobox',
+	  //       fieldLabel: 'Pre Select Users:',
+	  //       project: '/project/' + this._projectId,
+	  //       multiSelect: true,
+			// editable : true,
+			// includeWorkspaceUsers: true,
+			// //forceSelection : true,
+			// storeConfig: {
+		 //  		autoLoad: true
+   //          },
+			// // // allowBlank: true,
+	  // //       anyMatch: true,
+			// // // typeAhead: true,
+			// // width: 400,
+	  //       // scope: this,
+	  // 		_getUserQueryFilter: function(query) {
+   //          	var userQueryFilter = Rally.data.wsapi.Filter.or([
+	  //               {
+	  //                   property: 'DisplayName',
+	  //                   operator: '!=',
+	  //                   value: ''
+	  //               },
+	  //               {
+	  //                   property: 'FirstName',
+	  //                   operator: '!=',
+	  //                   value: ''
+	  //               },
+	  //               {
+	  //                   property: 'LastName',
+	  //                   operator: '!=',
+	  //                   value: ''
+	  //               },
+	  //               {
+	  //                   property: 'EmailAddress',
+	  //                   operator: '!=',
+	  //                   value: ''
+	  //               }
+	  //           ]);
+
+	  //           if (this.includeWorkspaceUsers) {
+	  //               userQueryFilter = userQueryFilter.and( {
+	  //                   property: 'WorkspacePermission',
+	  //                   operator: '!=',
+	  //                   value: 'No Access'
+	  //               });
+	  //           }
+
+	  //           return userQueryFilter;
+	  //       },
+
+	  //       _loadTeamMembershipStore: function() {
+	  //           this._configureUserSearchQueryStore();
+	  //           if (this._autoLoadStore || this._storeLoaded) {
+	  //               this.refreshStore();
+	  //           } else {
+	  //               this._fireComponentReady();
+	  //           }
+	  //       },
+
+	  //       _configureUserSearchQueryStore: function(query) {
+	  //         	var url = Rally.util.Ref.getUri(this.project) + '/Editors';
+	            
+
+	  //           var filter = this._getUserQueryFilter(query);
+	  //           this._configureStore(url, filter, this.USER_SEARCH_STORE_MODE);
+	  //           return filter;
+	  //       },
+
+		 //  	doQuery: function(queryString, forceAll, rawQuery) {
+   //              queryString = this._configureUserSearchQueryStore(queryString).toString();
+
+	  //           this.callParent([queryString, forceAll, rawQuery]);
+	  //       },
+
+	  //       listeners: {
+	  //       	change: function(combo) {
+			// 		console.log('User: ', combo.lastSelection);
+
+			// // 		this._usersSearch = combo.lastSelection;
+			// 	},
+			// 	scope: this
+	  //       }
+	  //   };
+
+
+		var userCombo = {
+		  	xtype: 'rallymultiobjectpicker',
+		  	fieldLabel: 'Pre Select Users:',
+		  	modelType: 'user',
+		  	filterFieldName: '_refObjectName',
+		  	width: 400,
+            _refreshStore: function() {
+            	var loadPromise;
+
+	            if (this.store) {
+	                //this.resetFilters();
+	                //this.store.clearGrouping();
+	                this.store.requester = this;
+
+	                if (this.store.getCount() < 1) {
+	                    loadPromise = this.store.load(this.storeLoadOptions);
+	                } else {
+	                    loadPromise = Deft.Promise.when(this.store.data);
+	                }
+	            } else {
+	                loadPromise = this.createStore().then({
+	                    success: function() {
+	                        return this.store.load(this.storeLoadOptions);
+	                    },
+	                    scope: this
+	                });
+	            }
+
+	            return loadPromise.then({
+	                success: this._onStoreLoaded,
+	                scope: this
+	            });
+	        },
+
+	        _onStoreLoaded: function(){
+	            if (this.allowNoEntry) {
+	                var noEntryExists = this.store.count() > 0 && this.store.findRecord(this.listCfg.displayField, this.noEntryText);
+
+	                if (!noEntryExists) {
+	                    var record = Ext.create(this.store.model);
+	                    record.set(this.listCfg.displayField, this.noEntryText);
+	                    record.set(this.selectionKey, null);
+	                    record.set(this.recordKey, 0);
+	                    this.store.insert(0, record);
+	                }
+	            }
+
+	            //this.resetFilters();
+	        },
+
+            store: this._userStore,
+		  	storeConfig: {
+		  		// autoLoad: true,
+                pageSize: 200,
+                fetch: ['_refObjectName', 'Name', 'ObjectID', 'DisplayName', 'UserName', 'Disabled'],
+                remoteFilter: false,
+                remoteGroup: false,
+				remoteSort: false,
+                limit: 1000,
+                sorters: [
+                    {
+                        property: '_refObjectName',
+                        direction: 'ASC'
+                    }
+                ]
+            },
+            listCfg: {
+                displayField: '_refObjectName'
+            },
+            listeners: {
+				selectionchange: function(picker, values) {
+					console.log('combo: ', picker);
+					console.log('combo: ', values);
+
+					picker.refreshView();
+
+					this._usersSearch = values;
+				},
+				scope: this
+	        }
+		};
+
+
 
 	    var searchButton = Ext.create('Rally.ui.Button', {
         	text: 'Search',
@@ -170,6 +420,7 @@
 					    	},
 						    iterationComboBox,
 						    statesComboBox,
+						    userCombo,
 						    searchButton
 					]}
 				]
@@ -264,6 +515,22 @@
 			value: false
 		});
 
+    	var usersFilter;
+    	if (this._usersSearch && this._usersSearch.length > 0) {
+    		var ids = [];
+    		_.each(this._usersSearch, function(user) {
+    			ids.push(user.get('ObjectID'));
+    		}, this);
+
+    		console.log('ids for searching', ids);
+
+			usersFilter = Ext.create('Rally.data.QueryFilter', {
+				property: 'Owner.ObjectID',
+				operator: 'in',
+				value: [ids]
+			});
+    	}
+
     	var filter = undefined;
 		console.log('all projects:', this._filterProject);
 		console.log('local projects:', this._filterProject.length);
@@ -277,11 +544,11 @@
 			}
 
 			if (this._filterProject.length > 1 && filter) {
-				var lFilter = this._getProjectFilter(project)
+				var lFilter = this._getProjectFilter(project);
 
 				filter = filter.or(lFilter);
 			} else {
-				filter = this._getProjectFilter(project)
+				filter = this._getProjectFilter(project);
 			}
 
     	}, this);
@@ -305,7 +572,11 @@
 
 
        	//filter = project;
-       	return blockedFilter.and(filter);
+       	if (usersFilter) {
+       		return usersFilter.and(blockedFilter.and(filter));
+       	} else {
+       		return blockedFilter.and(filter);
+       	}
     },
 
 
@@ -371,7 +642,7 @@
 
     	var panelButtons = Ext.create('Ext.container.Container', {
     		itemId:'panelButtons',
-    		width: 500,
+    		width: 400,
     		layout: {
 		        type: 'hbox'
 		    },
@@ -386,8 +657,8 @@
 
         var panelUsers = Ext.create('Ext.container.Container', {
     		itemId:'panelUsers',
-    		width: 400,
-    		height: 400,
+    		width: 350,
+    		height: 190,
     		autoScroll:true,
     		layout: {
 		        type: 'vbox'
@@ -409,27 +680,38 @@
 		    }]
         });
 
+        if (this._dialogModal) {
+        	this._dialogModal.destroy();
 
-        if (!this._dialogModal) {
-	    	this._dialogModal = Ext.create('Rally.ui.dialog.Dialog', {
-			     autoShow: true,
-			     draggable: true,
-			     closeAction: 'hide',
-			     closable: true,
-			     itemId: 'filterUserDialog',
-			     width: 500,
-			     title: 'Available Users to filter',
-			     items: [{
-			         xtype: 'component',
-			         html: 'Select users to proceed',
-			         padding: 10
-			     }, 
-			     panelUsers,
-			     panelButtons]
-			});
+        	this._dialogModal = this._createModal(panelUsers, panelButtons);
+        } else {
+	    	this._dialogModal = this._createModal(panelUsers, panelButtons);
         }
 
     	this._dialogModal.show();
+    },
+
+
+    _createModal: function(panelUsers, panelButtons) {
+    	var modal = Ext.create('Rally.ui.dialog.Dialog', {
+		     autoShow: true,
+		     draggable: true,
+		     closeAction: 'hide',
+		     closable: true,
+		     itemId: 'filterUserDialog',
+		     width: 410,
+		     height: 310,
+		     title: 'Available Users to filter',
+		     items: [{
+		         xtype: 'component',
+		         html: 'Select users to proceed',
+		         padding: 10
+		     }, 
+		     panelUsers,
+		     panelButtons]
+		});
+
+    	return modal;
     },
 
 
@@ -452,7 +734,7 @@
     	grid.store.clearFilter(true);
     	if (this._filterUserList) {
 	    	grid.store.filterBy(function(record, Owner) {
-	    		if (this._filterUserList.indexOf(record.get('Owner')) != -1) {
+	    		if (this._filterUserList.indexOf(record.get('Owner')) !== -1) {
 		            return true;
 		        } else {
 		            return false;
@@ -603,6 +885,8 @@
 			rows.push(row);
 
 		}, this);
+
+		console.log('User list for modal:', this._userList);
 
 
 		var store = Ext.create('Ext.data.JsonStore', {
