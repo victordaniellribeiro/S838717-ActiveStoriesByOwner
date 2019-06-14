@@ -2,6 +2,8 @@ Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
+    // stateful: true,
+
     _projectId: undefined,
     _projectStore: undefined,
     _iterationId: undefined,
@@ -15,6 +17,9 @@ Ext.define('CustomApp', {
     _localDefects: undefined,
     _localTestSets: undefined,
 
+
+    _userStore: undefined,
+    _usersSearch: undefined,
     _userList: undefined,
     _filterUserList: undefined,
     _dialogModal: undefined,
@@ -32,6 +37,24 @@ Ext.define('CustomApp', {
 			autoScroll:true
         }
     ],
+
+
+    //list of things to be saved
+    // getState: function() {
+    // 	console.log('get state');
+    //     return {
+    //         userStore: this._userStore,
+    //         usersSearch: this._usersSearch
+    //     };
+    // },
+
+
+    //return the state saved to this app
+    // applyState: function(state) {
+    // 	console.log('apply state', state);
+    //     this._userStore = state.userStore;
+    //     this._usersSearch = state.userSearch;
+    // },
 
 
     
@@ -54,6 +77,9 @@ Ext.define('CustomApp', {
             target: this
         });
 
+        // if (this._userStore) {
+        // 	console.log('state saved', this._userStore);
+        // }
 
         var userStore = Ext.create('Rally.data.wsapi.Store',{
 	  		// context: {
@@ -71,8 +97,7 @@ Ext.define('CustomApp', {
         		{
                     property: 'ObjectID',
                     operator: '=',
-                    // value: 46772556076
-                    value: 259798485476 //TODO switch to current project
+                    value: this._projectId
                 }
 			],
 
@@ -101,12 +126,7 @@ Ext.define('CustomApp', {
 			                    value: false
 			                }
 						],
-						// sorters: [
-		    //                 {
-		    //                     property: '_refObjectName',
-		    //                     direction: 'ASC'
-		    //                 }
-		    //             ],
+
 			            callback: function(users, operation, success) {
 			            	console.log('Editors loaded', users);
 			                Ext.Array.each(users, function(user) {
@@ -132,8 +152,6 @@ Ext.define('CustomApp', {
 	            scope: this
 	        }
     	});
-
-
 
         //this._buildFilter();
     },
@@ -284,6 +302,7 @@ Ext.define('CustomApp', {
 		  	modelType: 'user',
 		  	filterFieldName: '_refObjectName',
 		  	width: 400,
+		  	stateid: this.getContext().getScopedStateId('preUsers'),
             _refreshStore: function() {
             	var loadPromise;
 
@@ -356,10 +375,10 @@ Ext.define('CustomApp', {
 
 					this._usersSearch = values;
 				},
+
 				scope: this
 	        }
 		};
-
 
 
 	    var searchButton = Ext.create('Rally.ui.Button', {
@@ -370,6 +389,7 @@ Ext.define('CustomApp', {
         		//handles search
         		//console.log(initDate, endDate);
         		this._doSearch();
+        		this.saveState();
         		//this._loadEndData(projectId, this._releaseId, null);
         	}
         });

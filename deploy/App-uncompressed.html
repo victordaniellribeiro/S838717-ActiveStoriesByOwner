@@ -11,6 +11,8 @@
     extend: 'Rally.app.App',
     componentCls: 'app',
 
+    // stateful: true,
+
     _projectId: undefined,
     _projectStore: undefined,
     _iterationId: undefined,
@@ -24,6 +26,9 @@
     _localDefects: undefined,
     _localTestSets: undefined,
 
+
+    _userStore: undefined,
+    _usersSearch: undefined,
     _userList: undefined,
     _filterUserList: undefined,
     _dialogModal: undefined,
@@ -41,6 +46,24 @@
 			autoScroll:true
         }
     ],
+
+
+    //list of things to be saved
+    // getState: function() {
+    // 	console.log('get state');
+    //     return {
+    //         userStore: this._userStore,
+    //         usersSearch: this._usersSearch
+    //     };
+    // },
+
+
+    //return the state saved to this app
+    // applyState: function(state) {
+    // 	console.log('apply state', state);
+    //     this._userStore = state.userStore;
+    //     this._usersSearch = state.userSearch;
+    // },
 
 
     
@@ -63,6 +86,9 @@
             target: this
         });
 
+        // if (this._userStore) {
+        // 	console.log('state saved', this._userStore);
+        // }
 
         var userStore = Ext.create('Rally.data.wsapi.Store',{
 	  		// context: {
@@ -80,8 +106,7 @@
         		{
                     property: 'ObjectID',
                     operator: '=',
-                    // value: 46772556076
-                    value: 259798485476 //TODO switch to current project
+                    value: this._projectId
                 }
 			],
 
@@ -110,12 +135,7 @@
 			                    value: false
 			                }
 						],
-						// sorters: [
-		    //                 {
-		    //                     property: '_refObjectName',
-		    //                     direction: 'ASC'
-		    //                 }
-		    //             ],
+
 			            callback: function(users, operation, success) {
 			            	console.log('Editors loaded', users);
 			                Ext.Array.each(users, function(user) {
@@ -141,8 +161,6 @@
 	            scope: this
 	        }
     	});
-
-
 
         //this._buildFilter();
     },
@@ -293,6 +311,7 @@
 		  	modelType: 'user',
 		  	filterFieldName: '_refObjectName',
 		  	width: 400,
+		  	stateid: this.getContext().getScopedStateId('preUsers'),
             _refreshStore: function() {
             	var loadPromise;
 
@@ -365,10 +384,10 @@
 
 					this._usersSearch = values;
 				},
+
 				scope: this
 	        }
 		};
-
 
 
 	    var searchButton = Ext.create('Rally.ui.Button', {
@@ -379,6 +398,7 @@
         		//handles search
         		//console.log(initDate, endDate);
         		this._doSearch();
+        		this.saveState();
         		//this._loadEndData(projectId, this._releaseId, null);
         	}
         });
