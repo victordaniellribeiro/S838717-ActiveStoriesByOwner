@@ -6,8 +6,6 @@ Ext.define('CustomApp', {
 
     _projectId: undefined,
     _projectStore: undefined,
-    _iterationId: undefined,
-    _iterationName: undefined,
     _filterProject: undefined,
     _featureState: undefined,
 
@@ -158,34 +156,6 @@ Ext.define('CustomApp', {
 
 
     _buildFilter: function() {
-    	var iterationComboBox = Ext.create('Rally.ui.combobox.IterationComboBox', {
-			fieldLabel: 'Iteration:',
-			width: 400,
-            itemId: 'iterationComboBox',
-            allowClear: true,
-            showArrows: false,
-            scope: this,
-            listeners: {
-                ready: function(combobox) {
-                	console.log('combo ready:', combobox);
-                	combobox.select(' ');
-                	// var iteration = combobox.getRecord();
-                	// this._iterationId = iteration.get('ObjectID');
-                	// this._iterationName = iteration.get('Name');
-                	console.log('iteration', this._iterationName);
-
-                },
-                select: function(combobox, records) {
-                    var iteration = records[0];
-                	this._iterationId = iteration.get('ObjectID');
-                	this._iterationName = iteration.get('Name');
-
-                	console.log('iteration', this._iterationName);
-                },
-                scope: this
-            }
-
-        });
 
         var statesComboBox = { 
         	xtype: 'rallyfieldvaluecombobox',
@@ -429,7 +399,6 @@ Ext.define('CustomApp', {
 						        	scope:this
 						        }
 					    	},
-						    iterationComboBox,
 						    statesComboBox,
 						    userCombo,
 						    searchButton
@@ -590,16 +559,6 @@ Ext.define('CustomApp', {
        	}
     },
 
-
-    _getIterationFilter: function() {
-    	var iterationFilter = Ext.create('Rally.data.QueryFilter', {
-			property: 'Iteration.Name',
-            operator: '=',
-            value: this._iterationName
-		});
-
-		return iterationFilter;
-    },
 
 
     _getStateFilter: function(baseFilter) {
@@ -962,13 +921,6 @@ Ext.define('CustomApp', {
     _loadStories: function() {
     	var filter = this._getFilters();
 
-    	if (this._iterationName && this._iterationName !== '-- Clear --') {
-    		filter = filter.and(this._getIterationFilter());
-
-    		console.log('iter filter', this._iterationName);
-    		console.log('iter filter string', filter.toString());
-    	}
-
     	console.log('filter', filter);
 
     	var storyStore = Ext.create('Rally.data.wsapi.artifact.Store', {
@@ -991,10 +943,6 @@ Ext.define('CustomApp', {
     _loadDefects: function() {
     	var filter = this._getFilters();
 
-    	if (this._iterationName && this._iterationName !== '-- Clear --') {
-    		filter = filter.and(this._getIterationFilter());
-    	}
-
     	var defectStore = Ext.create('Rally.data.wsapi.artifact.Store', {
 			context: {
 		        projectScopeUp: false,
@@ -1013,10 +961,6 @@ Ext.define('CustomApp', {
 
     _loadTestSets: function() {
     	var filter = this._getFilters();
-
-    	if (this._iterationName !== '-- Clear --') {
-    		filter = filter.and(this._getIterationFilter());
-    	}
 
     	var testSetStore = Ext.create('Rally.data.wsapi.artifact.Store', {
 			context: {
